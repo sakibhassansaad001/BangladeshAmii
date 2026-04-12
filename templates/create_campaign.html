@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Create Campaign · BangladeshAmi{% endblock %}
+{% block content %}
+
+<section class="form-page-shell">
+    <aside class="form-sidebar">
+        <div class="sidebar-sticky">
+            <span class="sidebar-kicker">Launch Progress</span>
+            <div class="step-item active"><span>1</span><strong>Project Basics</strong></div>
+            <div class="step-item"><span>2</span><strong>Category & Type</strong></div>
+            <div class="step-item"><span>3</span><strong>Media Upload</strong></div>
+            <div class="step-note">
+                A complete campaign with clear details and strong visuals inspires more trust.
+            </div>
+        </div>
+    </aside>
+
+    <section class="form-main">
+        <div class="section-heading">
+            <h1>Launch Your Campaign</h1>
+            <p>Present your idea clearly and submit it for review.</p>
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" class="stack-form">
+            <div class="form-panel">
+                <h3><span class="material-symbols-outlined">edit_note</span> Project Basics</h3>
+
+                <div class="form-group">
+                    <label>Campaign Title</label>
+                    <input type="text" name="title" placeholder="Enter campaign title" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="5" placeholder="Explain your campaign clearly..." required></textarea>
+                </div>
+
+                <div class="two-col">
+                    <div class="form-group">
+                        <label>Goal Amount (৳)</label>
+                        <input type="number" name="goal" min="1" placeholder="50000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Duration (days)</label>
+                        <input type="number" name="duration" min="1" placeholder="30" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-panel">
+                <h3><span class="material-symbols-outlined">category</span> Select Category</h3>
+                <div class="selection-grid">
+                    {% for cat in categories %}
+                    <label class="choice-card">
+                        <input type="radio" name="category" value="{{ cat }}" required>
+                        <span>{{ cat }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-panel">
+                <h3><span class="material-symbols-outlined">monetization_on</span> Crowdfunding Type</h3>
+                <div class="selection-grid">
+                    {% for t in crowdfunding_types %}
+                    <label class="choice-card">
+                        <input type="radio" name="crowdfunding_type" value="{{ t }}" required>
+                        <span>{{ t }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-panel">
+                <h3><span class="material-symbols-outlined">perm_media</span> Media Upload</h3>
+
+                <label class="upload-card" for="media-input">
+                    <span class="material-symbols-outlined">cloud_upload</span>
+                    <strong>Upload images or videos</strong>
+                    <small>PNG, JPG, JPEG, GIF, MP4, WEBM, MOV</small>
+                    <input type="file" id="media-input" name="media" multiple accept="image/*,video/*" hidden onchange="showPreview(this)">
+                </label>
+
+                <div id="media-preview" class="media-preview"></div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Submit Campaign for Review</button>
+            </div>
+        </form>
+    </section>
+</section>
+
+<script>
+function showPreview(input) {
+    const preview = document.getElementById('media-preview');
+    preview.innerHTML = '';
+
+    Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = e => {
+            if (file.type.startsWith('image/')) {
+                preview.innerHTML += `<div class="preview-card"><img src="${e.target.result}" class="preview-img" alt="preview"></div>`;
+            } else {
+                preview.innerHTML += `<div class="preview-card preview-file"><span class="material-symbols-outlined">movie</span><span>${file.name}</span></div>`;
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+}
+</script>
+
+{% endblock %}

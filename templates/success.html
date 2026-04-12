@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Donation Success · BangladeshAmi{% endblock %}
+{% block content %}
+
+<section class="success-shell">
+    <div class="success-card">
+        <div class="success-icon">🎉</div>
+        <h1>Thank You!</h1>
+
+        {% if is_anonymous %}
+            <p>Your <strong>anonymous</strong> donation of <strong>৳{{ amount }}</strong> has been received.</p>
+        {% else %}
+            <p>Your donation of <strong>৳{{ amount }}</strong> has been received.</p>
+        {% endif %}
+
+        <p class="success-muted">You supported <strong>{{ campaign.title }}</strong>.</p>
+
+        <div class="success-actions">
+            <a href="{{ url_for('campaign_details_route', id=campaign.id) }}" class="btn btn-primary">View Campaign</a>
+            <a href="{{ url_for('index') }}" class="btn btn-light">Browse More</a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
