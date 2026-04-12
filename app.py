@@ -230,6 +230,143 @@ def add_update(id):
     flash("Campaign update posted.", "success")
     return redirect(url_for('campaign_details_route', id=id))
 
+# Hridoy
+@app.route('/')
+def index():
+    search_query = request.args.get('q', '').strip()
+    selected_category = request.args.get('category', '')
+    selected_type = request.args.get('type', '')
+
+    query = Campaign.query.filter_by(status="approved")
+
+    if search_query:
+        query = query.filter(Campaign.title.ilike(f'%{search_query}%'))
+    if selected_category:
+        query = query.filter_by(category=selected_category)
+    if selected_type:
+        query = query.filter_by(crowdfunding_type=selected_type)
+
+    campaigns = query.order_by(Campaign.created_at.desc()).all()
+
+    for campaign in campaigns:
+        if campaign.goal_amount and campaign.goal_amount > 0:
+            campaign.percent = min((campaign.current_amount / campaign.goal_amount) * 100, 100)
+        else:
+            campaign.percent = 0
+
+        first_media = Media.query.filter_by(campaign_id=campaign.id).first()
+        campaign.cover_media = first_media
+
+    total_raised = sum(c.current_amount or 0 for c in Campaign.query.filter_by(status="approved").all())
+    total_backers = Contribution.query.count()
+
+    return render_template(
+        "index.html",
+        campaigns=campaigns,
+        categories=CATEGORIES,
+        crowdfunding_types=CROWDFUNDING_TYPES,
+        selected_category=selected_category,
+        selected_type=selected_type,
+        search_query=search_query,
+        total_raised=total_raised,
+        total_backers=total_backers
+    )
+
+# HRIDOY
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        university = request.form.get('university', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
+
+        if not name or not university or not email or not password:
+            flash("All signup fields are required.", "error")
+            return redirect(url_for('signup'))
+
+        if User.query.filter_by(email=email).first():
+            flash("An account with this email already exists.", "error")
+            return redirect(url_for('signup'))
+
+        hashed_pw = generate_password_hash(password)
+        user = User(
+            name=name,
+            email=email,
+            password=hashed_pw,
+            university_name=university
+        )
+        db.session.add(user)
+        db.session.commit()
+        flash("Account created successfully. Please sign in.", "success")
+        return redirect(url_for('signin'))
+
+    return render_template("signup.html")
+
+# HRIDOY
+@app.route('/signin', methods=['GET', 'POST'])
+def signin():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '').strip()
+
+        if not email or not password:
+            flash("Email and password are required.", "error")
+            return redirect(url_for('signin'))
+
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            flash("Signed in successfully.", "success")
+            return redirect(url_for('dashboard'))
+
+        flash("Invalid email or password.", "error")
+        return redirect(url_for('signin'))
+
+    return render_template("signin.html")
+
+# HRIDOY
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash("You have been logged out.", "success")
+    return redirect(url_for('index'))
+
+# HRIDOY
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    my_campaigns = Campaign.query.filter_by(user_id=current_user.id).order_by(Campaign.created_at.desc()).all()
+
+    for campaign in my_campaigns:
+        if campaign.goal_amount and campaign.goal_amount > 0:
+            campaign.percent = min((campaign.current_amount / campaign.goal_amount) * 100, 100)
+        else:
+            campaign.percent = 0
+
+    my_contributions = Contribution.query.filter_by(user_id=current_user.id).order_by(
+        Contribution.contribution_date.desc()
+    ).all()
+    for contrib in my_contributions:
+        contrib.campaign_info = Campaign.query.get(contrib.campaign_id)
+
+    my_wishlist = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.added_at.desc()).all()
+    for w in my_wishlist:
+        w.campaign_info = Campaign.query.get(w.campaign_id)
+
+    my_notifications = Notification.query.filter_by(user_id=current_user.id)\
+        .order_by(Notification.created_at.desc()).all()
+
+    return render_template(
+        "dashboard.html",
+        campaigns=my_campaigns,
+        my_contributions=my_contributions,
+        my_wishlist=my_wishlist,
+        my_notifications=my_notifications
+    )
+
+
 
 if __name__ == "__main__":
     with app.app_context():

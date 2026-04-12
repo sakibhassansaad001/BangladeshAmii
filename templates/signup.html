@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Sign Up · BangladeshAmi{% endblock %}
+{% block content %}
+
+<section class="auth-layout">
+    <div class="auth-side">
+        <span class="hero-chip">
+            <span class="hero-dot"></span>
+            Create your account
+        </span>
+        <h1>Join the movement behind meaningful student and community projects.</h1>
+        <p>Launch campaigns, build trust with donors and manage updates from one place.</p>
+    </div>
+
+    <div class="auth-card">
+        <div class="auth-card-header">
+            <h2>Sign Up</h2>
+            <p>Create your BangladeshAmi profile.</p>
+        </div>
+
+        <form method="POST" class="form-grid">
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="name" placeholder="Your full name" required>
+            </div>
+
+            <div class="form-group">
+                <label>University</label>
+                <input type="text" name="university" placeholder="University or institution" required>
+            </div>
+
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" placeholder="name@email.com" required>
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Create a secure password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+
+        <p class="auth-switch">
+            Already have an account?
+            <a href="{{ url_for('signin') }}">Sign in</a>
+        </p>
+    </div>
+</section>
+
+{% endblock %}

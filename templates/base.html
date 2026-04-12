@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>{% block title %}BangladeshAmi{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1" rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="site-shell">
+        <header class="site-header">
+            <div class="site-header-inner">
+                <div class="brand-wrap">
+                    <a href="{{ url_for('index') }}" class="brand">
+                        <span class="material-symbols-outlined brand-icon">school</span>
+                        <span>BangladeshAmi</span>
+                    </a>
+
+                    <form action="{{ url_for('index') }}" method="GET" class="header-search desktop-only">
+                        <span class="material-symbols-outlined">search</span>
+                        <input type="text" name="q" placeholder="Search campaigns..." value="{{ request.args.get('q', '') }}">
+                    </form>
+                </div>
+
+                <nav class="site-nav">
+                    <a href="{{ url_for('index') }}">Explore</a>
+
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                        <a href="{{ url_for('create_campaign') }}" class="nav-pill">Start a Campaign</a>
+
+                        <div class="notification-dropdown">
+                            <button class="notification-bell" type="button" onclick="toggleNotificationMenu()">
+                                <span class="material-symbols-outlined">notifications</span>
+                                {% if unread_notification_count > 0 %}
+                                    <span class="notification-badge">{{ unread_notification_count }}</span>
+                                {% endif %}
+                            </button>
+
+                            <div id="notification-menu" class="notification-menu">
+                                <div class="notification-menu-head">
+                                    <h4>Notifications</h4>
+                                    {% if unread_notification_count > 0 %}
+                                    <form action="{{ url_for('mark_all_notifications_read') }}" method="POST">
+                                        <button type="submit" class="notification-link-btn">Mark all as read</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+
+                                {% if recent_notifications %}
+                                    <div class="notification-list">
+                                        {% for notification in recent_notifications %}
+                                            <div class="notification-item {% if not notification.is_read %}unread{% endif %}">
+                                                <div class="notification-item-top">
+                                                    <span class="notification-category">{{ notification.category|capitalize }}</span>
+                                                    <small>{{ notification.created_at.strftime('%d %b %H:%M') }}</small>
+                                                </div>
+                                                <strong>{{ notification.title }}</strong>
+                                                <p>{{ notification.message }}</p>
+                                                <form action="{{ url_for('mark_notification_read', id=notification.id) }}" method="POST">
+                                                    <button type="submit" class="notification-link-btn">
+                                                        {% if notification.campaign_id %}Open{% else %}Mark as read{% endif %}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                    <a href="{{ url_for('dashboard') }}#notifications" class="notification-view-all">View all in dashboard</a>
+                                {% else %}
+                                    <div class="notification-empty">No notifications yet.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+                            <span class="material-symbols-outlined theme-icon-light">light_mode</span>
+                            <span class="material-symbols-outlined theme-icon-dark">dark_mode</span>
+                        </button>
+
+                        {% if current_user.role == 'admin' %}
+                            <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+                        {% endif %}
+                        <a href="{{ url_for('logout') }}">Logout</a>
+                    {% else %}
+                        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle dark mode">
+                            <span class="material-symbols-outlined theme-icon-light">light_mode</span>
+                            <span class="material-symbols-outlined theme-icon-dark">dark_mode</span>
+                        </button>
+                        <a href="{{ url_for('signin') }}">Login</a>
+                        <a href="{{ url_for('signup') }}" class="nav-pill">Sign Up</a>
+                    {% endif %}
+                </nav>
+            </div>
+        </header>
+
+        <main class="page-wrap">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-stack">
+                        {% for category, message in messages %}
+                            <div class="flash-message flash-{{ category }}">
+                                <span class="material-symbols-outlined">
+                                    {% if category == 'success' %}check_circle
+                                    {% elif category == 'error' %}error
+                                    {% else %}info{% endif %}
+                                </span>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="site-footer">
+            <div class="site-footer-inner">
+                <div>
+                    <div class="footer-brand">
+                        <span class="material-symbols-outlined">school</span>
+                        <span>BangladeshAmi</span>
+                    </div>
+                    <p>Empowering students, creators and communities through transparent crowdfunding.</p>
+                </div>
+
+                <div class="footer-links">
+                    <a href="{{ url_for('index') }}">Explore</a>
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('create_campaign') }}">Start a Campaign</a>
+                    {% else %}
+                    <a href="{{ url_for('signin') }}">Login</a>
+                    <a href="{{ url_for('signup') }}">Sign Up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function toggleNotificationMenu() {
+            const menu = document.getElementById('notification-menu');
+            if (menu) {
+                menu.classList.toggle('show');
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            const dropdown = document.querySelector('.notification-dropdown');
+            const menu = document.getElementById('notification-menu');
+
+            if (dropdown && menu && !dropdown.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+
+        (function () {
+            const root = document.documentElement;
+            const savedTheme = localStorage.getItem('theme');
+
+            if (savedTheme === 'dark') {
+                root.classList.add('dark-theme');
+            }
+
+            function syncThemeIcons() {
+                const toggle = document.getElementById('theme-toggle');
+                if (!toggle) return;
+                toggle.setAttribute(
+                    'aria-label',
+                    root.classList.contains('dark-theme') ? 'Switch to light mode' : 'Switch to dark mode'
+                );
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const toggle = document.getElementById('theme-toggle');
+                if (toggle) {
+                    toggle.addEventListener('click', function () {
+                        root.classList.toggle('dark-theme');
+                        localStorage.setItem(
+                            'theme',
+                            root.classList.contains('dark-theme') ? 'dark' : 'light'
+                        );
+                        syncThemeIcons();
+                    });
+                }
+                syncThemeIcons();
+            });
+        })();
+    </script>
+</body>
+</html>

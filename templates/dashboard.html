@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · BangladeshAmi{% endblock %}
+{% block content %}
+
+<section class="dashboard-hero">
+    <div class="dashboard-hero-card">
+        <div class="profile-badge">{{ current_user.name[0].upper() }}</div>
+        <div>
+            <h1>{{ current_user.name }}</h1>
+            <p>{{ current_user.email }}</p>
+            <span class="profile-subline">🎓 {{ current_user.university_name }}</span>
+        </div>
+    </div>
+</section>
+
+<section class="dashboard-tabs-wrap">
+    <button class="dash-tab active" onclick="showTab('campaigns', this)">My Campaigns ({{ campaigns|length }})</button>
+    <button class="dash-tab" onclick="showTab('contributions', this)">Contributions ({{ my_contributions|length }})</button>
+    <button class="dash-tab" onclick="showTab('wishlist', this)">Wishlist ({{ my_wishlist|length }})</button>
+    <button class="dash-tab" onclick="showTab('notifications', this)">Notifications ({{ my_notifications|length }})</button>
+</section>
+
+<section id="tab-campaigns" class="tab-content">
+    <div class="toolbar-card slim">
+        <div class="toolbar-head">
+            <div>
+                <h2>My Campaigns</h2>
+                <p>Track approval status and funding progress.</p>
+            </div>
+            <a href="{{ url_for('create_campaign') }}" class="btn btn-primary">+ Create Campaign</a>
+        </div>
+    </div>
+
+    {% if campaigns %}
+        <div class="dashboard-list">
+            {% for campaign in campaigns %}
+            <div class="dashboard-card">
+                <div class="dashboard-card-main">
+                    <div class="dashboard-meta-row">
+                        <span class="pill pill-soft">{{ campaign.category }}</span>
+                        <span class="status-badge status-{{ campaign.status }}">{{ campaign.status }}</span>
+                    </div>
+                    <h3><a href="{{ url_for('campaign_details_route', id=campaign.id) }}">{{ campaign.title }}</a></h3>
+                    <p>{{ campaign.crowdfunding_type }}</p>
+                    <div class="fund-row">
+                        <strong>৳{{ "{:,.0f}".format(campaign.current_amount) }}</strong>
+                        <span>Goal ৳{{ "{:,.0f}".format(campaign.goal_amount) }}</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" style="width: {{ campaign.percent }}%"></div>
+                    </div>
+                    <small>Created {{ campaign.created_at.strftime('%d %b %Y') }}</small>
+                </div>
+
+                {% if campaign.status == "pending" %}
+                <div class="dashboard-card-actions">
+                    <a href="{{ url_for('edit_campaign', id=campaign.id) }}" class="btn btn-light">Edit</a>
+                    <a href="{{ url_for('cancel_campaign', id=campaign.id) }}" class="btn btn-danger">Cancel</a>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state small">
+            <span class="material-symbols-outlined">folder_open</span>
+            <h3>No campaigns yet</h3>
+            <p>Create your first campaign to get started.</p>
+        </div>
+    {% endif %}
+</section>
+
+<section id="tab-contributions" class="tab-content" style="display:none">
+    <div class="toolbar-card slim">
+        <div class="toolbar-head">
+            <div>
+                <h2>My Contributions</h2>
+                <p>Your donation history in one place.</p>
+            </div>
+        </div>
+    </div>
+
+    {% if my_contributions %}
+        <div class="dashboard-list">
+            {% for contrib in my_contributions %}
+            <div class="dashboard-card">
+                <div class="dashboard-card-main">
+                    <div class="dashboard-meta-row">
+                        {% if contrib.is_anonymous %}
+                            <span class="pill pill-soft">Anonymous</span>
+                        {% endif %}
+                    </div>
+                    <h3>
+                        {% if contrib.campaign_info %}
+                            <a href="{{ url_for('campaign_details_route', id=contrib.campaign_id) }}">{{ contrib.campaign_info.title }}</a>
+                        {% else %}
+                            Campaign not found
+                        {% endif %}
+                    </h3>
+                    <p>{{ contrib.contribution_date.strftime('%d %b %Y, %H:%M') }}</p>
+                </div>
+                <div class="dashboard-amount">৳{{ "{:,.0f}".format(contrib.amount) }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state small">
+            <span class="material-symbols-outlined">volunteer_activism</span>
+            <h3>No contributions yet</h3>
+            <p>Support a campaign to see it listed here.</p>
+        </div>
+    {% endif %}
+</section>
+
+<section id="tab-wishlist" class="tab-content" style="display:none">
+    <div class="toolbar-card slim">
+        <div class="toolbar-head">
+            <div>
+                <h2>My Wishlist</h2>
+                <p>Campaigns you want to revisit later.</p>
+            </div>
+        </div>
+    </div>
+
+    {% if my_wishlist %}
+    <div class="campaign-grid">
+        {% for item in my_wishlist %}
+            {% if item.campaign_info %}
+            <article class="campaign-card modern-card">
+                <div class="campaign-cover">
+                    <div class="campaign-cover-fallback">
+                        <span class="material-symbols-outlined">favorite</span>
+                    </div>
+                </div>
+                <div class="campaign-body">
+                    <span class="pill pill-soft">{{ item.campaign_info.category }}</span>
+                    <h3><a href="{{ url_for('campaign_details_route', id=item.campaign_id) }}">{{ item.campaign_info.title }}</a></h3>
+                    <p class="campaign-desc">Goal: ৳{{ "{:,.0f}".format(item.campaign_info.goal_amount) }}</p>
+                    <p class="campaign-desc">Added {{ item.added_at.strftime('%d %b %Y') }}</p>
+                </div>
+                <div class="campaign-actions">
+                    <form action="{{ url_for('campaign.toggle_wishlist', id=item.campaign_id) }}" method="POST">
+                        <button type="submit" class="btn btn-light btn-block">Remove</button>
+                    </form>
+                </div>
+            </article>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% else %}
+        <div class="empty-state small">
+            <span class="material-symbols-outlined">favorite</span>
+            <h3>Your wishlist is empty</h3>
+            <p>Browse campaigns and save the ones you like.</p>
+        </div>
+    {% endif %}
+</section>
+
+<section id="tab-notifications" class="tab-content" style="display:none">
+    <div class="toolbar-card slim" id="notifications">
+        <div class="toolbar-head">
+            <div>
+                <h2>Notifications</h2>
+                <p>Track donations, campaign updates, comments, and alerts.</p>
+            </div>
+            {% if my_notifications %}
+            <form action="{{ url_for('mark_all_notifications_read') }}" method="POST">
+                <button type="submit" class="btn btn-light">Mark all as read</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if my_notifications %}
+        <div class="notification-page-list">
+            {% for notification in my_notifications %}
+            <div class="notification-page-item {% if not notification.is_read %}unread{% endif %}">
+                <div class="notification-page-top">
+                    <div>
+                        <span class="notification-category">{{ notification.category|capitalize }}</span>
+                        <h3>{{ notification.title }}</h3>
+                    </div>
+                    <small>{{ notification.created_at.strftime('%d %b %Y, %H:%M') }}</small>
+                </div>
+
+                <p>{{ notification.message }}</p>
+
+                <div class="notification-page-actions">
+                    <form action="{{ url_for('mark_notification_read', id=notification.id) }}" method="POST">
+                        <button type="submit" class="btn btn-primary">
+                            {% if notification.campaign_id %}Open{% else %}Mark as read{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state small">
+            <span class="material-symbols-outlined">notifications</span>
+            <h3>No notifications yet</h3>
+            <p>When something happens on your campaigns, it will appear here.</p>
+        </div>
+    {% endif %}
+</section>
+
+<script>
+function showTab(tabName, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.dash-tab').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tabName).style.display = 'block';
+    btn.classList.add('active');
+
+    if (tabName === 'notifications') {
+        window.location.hash = 'notifications';
+    }
+}
+
+window.addEventListener('load', function () {
+    if (window.location.hash === '#notifications') {
+        const notificationBtn = Array.from(document.querySelectorAll('.dash-tab'))
+            .find(btn => btn.textContent.includes('Notifications'));
+        if (notificationBtn) {
+            showTab('notifications', notificationBtn);
+        }
+    }
+});
+</script>
+
+{% endblock %}
