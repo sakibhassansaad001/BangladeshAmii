@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard · BangladeshAmi{% endblock %}
+{% block content %}
+
+<section class="toolbar-card">
+    <div class="toolbar-head">
+        <div>
+            <h2>Pending Campaign Reviews</h2>
+            <p>Approve or reject campaigns waiting for moderation.</p>
+        </div>
+        <div class="result-chip">{{ campaigns|length }} pending</div>
+    </div>
+</section>
+
+{% if campaigns %}
+<div class="dashboard-list">
+    {% for campaign in campaigns %}
+    <div class="dashboard-card admin-review-card">
+        <div class="dashboard-card-main">
+            <div class="dashboard-meta-row">
+                <span class="pill pill-soft">{{ campaign.category }}</span>
+                <span class="pill pill-outline">{{ campaign.crowdfunding_type }}</span>
+            </div>
+            <h3>{{ campaign.title }}</h3>
+            <p>{{ campaign.description }}</p>
+            <div class="campaign-footer-meta">
+                <span>Goal: ৳{{ "{:,.0f}".format(campaign.goal_amount) }}</span>
+                <span>Duration: {{ campaign.duration }} days</span>
+            </div>
+        </div>
+        <div class="dashboard-card-actions">
+            <a href="{{ url_for('approve', id=campaign.id) }}" class="btn btn-primary">Approve</a>
+            <a href="{{ url_for('reject', id=campaign.id) }}" class="btn btn-danger">Reject</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state small">
+    <span class="material-symbols-outlined">task_alt</span>
+    <h3>No pending campaigns</h3>
+    <p>Everything is reviewed for now.</p>
+</div>
+{% endif %}
+
+{% endblock %}

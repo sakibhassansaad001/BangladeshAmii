@@ -366,6 +366,216 @@ def dashboard():
         my_notifications=my_notifications
     )
 
+# SIAM
+@app.route('/notifications/read-all', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    Notification.query.filter_by(user_id=current_user.id, is_read=False).update(
+        {"is_read": True}
+    )
+    db.session.commit()
+    flash("All notifications marked as read.", "success")
+    return redirect(url_for('dashboard'))
+
+# SIAM
+@app.route('/admin')
+@login_required
+def admin_dashboard():
+    if current_user.role != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for('index'))
+    campaigns = Campaign.query.filter_by(status="pending").order_by(Campaign.created_at.desc()).all()
+    return render_template("admin_dashboard.html", campaigns=campaigns)
+
+# SIAM
+@app.route('/contribute/<int:id>', methods=['POST'])
+@login_required
+def contribute(id):
+    campaign = Campaign.query.get_or_404(id)
+
+    if campaign.user_id == current_user.id:
+        flash("You cannot donate to your own campaign.", "error")
+        return redirect(url_for('campaign_details_route', id=id))
+
+    amount_text = request.form.get('amount', '').strip()
+    if not amount_text:
+        flash("Donation amount is required.", "error")
+        return redirect(url_for('campaign_details_route', id=id))
+
+    try:
+        amount = float(amount_text)
+    except ValueError:
+        flash("Please enter a valid donation amount.", "error")
+        return redirect(url_for('campaign_details_route', id=id))
+
+    if amount <= 0:
+        flash("Donation amount must be greater than 0.", "error")
+        return redirect(url_for('campaign_details_route', id=id))
+
+    is_anonymous = 'anonymous' in request.form
+
+    contribution = Contribution(
+        amount=amount,
+        campaign_id=id,
+        user_id=current_user.id,
+        is_anonymous=is_anonymous
+    )
+    campaign.current_amount += amount
+
+    if campaign.current_amount >= campaign.goal_amount:
+        campaign.status = "completed"
+
+    db.session.add(contribution)
+
+    donor_name = "Someone" if is_anonymous else current_user.name
+    create_notification(
+        user_id=campaign.user_id,
+        title="New donation received",
+        message=f"{donor_name} donated ৳{amount:.0f} to '{campaign.title}'.",
+        category="donation",
+        campaign_id=campaign.id
+    )
+
+    db.session.commit()
+
+    return redirect(url_for('campaign.success', campaign_id=id, amount=amount, anonymous=str(is_anonymous).lower()))
+
+# SIAM
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_campaign(id):
+    campaign = Campaign.query.get_or_404(id)
+
+    if campaign.user_id != current_user.id or campaign.status != "pending":
+        flash("You can only edit your own pending campaign.", "error")
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        description = request.form.get('description', '').strip()
+        goal = request.form.get('goal', '').strip()
+        duration = request.form.get('duration', '').strip()
+        category = request.form.get('category', '').strip()
+        crowdfunding_type = request.form.get('crowdfunding_type', '').strip()
+
+        if not title or not description or not goal or not duration or not category or not crowdfunding_type:
+            flash("All campaign fields are required.", "error")
+            return redirect(url_for('edit_campaign', id=id))
+
+        try:
+            goal_amount = float(goal)
+            duration_days = int(duration)
+        except ValueError:
+            flash("Goal amount and duration must be valid numbers.", "error")
+            return redirect(url_for('edit_campaign', id=id))
+
+        if goal_amount <= 0 or duration_days <= 0:
+            flash("Goal amount and duration must be greater than 0.", "error")
+            return redirect(url_for('edit_campaign', id=id))
+
+        if category not in CATEGORIES:
+            flash("Please select a valid category.", "error")
+            return redirect(url_for('edit_campaign', id=id))
+
+        if crowdfunding_type not in CROWDFUNDING_TYPES:
+            flash("Please select a valid crowdfunding type.", "error")
+            return redirect(url_for('edit_campaign', id=id))
+
+        campaign.title = title
+        campaign.description = description
+        campaign.goal_amount = goal_amount
+        campaign.duration = duration_days
+        campaign.category = category
+        campaign.crowdfunding_type = crowdfunding_type
+        db.session.commit()
+        flash("Campaign updated successfully.", "success")
+        return redirect(url_for('dashboard'))
+
+    return render_template(
+        "edit_campaign.html",
+        campaign=campaign,
+        categories=CATEGORIES,
+        crowdfunding_types=CROWDFUNDING_TYPES
+    )
+
+# SIAM
+@app.route('/approve/<int:id>')
+@login_required
+def approve(id):
+    if current_user.role == "admin":
+        campaign = Campaign.query.get(id)
+        campaign.status = "approved"
+        db.session.commit()
+        flash("Campaign approved.", "success")
+    else:
+        flash("Admin access only.", "error")
+    return redirect(url_for('admin_dashboard'))
+
+# SIAM
+@app.route('/reject/<int:id>')
+@login_required
+def reject(id):
+    if current_user.role == "admin":
+        campaign = Campaign.query.get(id)
+        campaign.status = "rejected"
+        db.session.commit()
+        flash("Campaign rejected.", "success")
+    else:
+        flash("Admin access only.", "error")
+    return redirect(url_for('admin_dashboard'))
+
+# SIAM
+@app.route('/campaign/<int:id>')
+def campaign_details_route(id):
+    campaign = Campaign.query.get_or_404(id)
+    updates = CampaignUpdate.query.filter_by(campaign_id=id).order_by(CampaignUpdate.created_at.desc()).all()
+
+    if campaign.goal_amount and campaign.goal_amount > 0:
+        campaign.percent = min((campaign.current_amount / campaign.goal_amount) * 100, 100)
+    else:
+        campaign.percent = 0
+
+    media_files = Media.query.filter_by(campaign_id=id).all()
+
+    contributions = Contribution.query.filter_by(campaign_id=id).order_by(Contribution.contribution_date.desc()).all()
+    for c in contributions:
+        c.user_info = None if c.is_anonymous else User.query.get(c.user_id)
+
+    is_wishlisted = False
+    if current_user.is_authenticated:
+        is_wishlisted = Wishlist.query.filter_by(user_id=current_user.id, campaign_id=id).first() is not None
+
+    pinned = Comment.query.filter_by(campaign_id=id, parent_id=None, is_pinned=True).order_by(Comment.created_at.desc()).all()
+    regular = Comment.query.filter_by(campaign_id=id, parent_id=None, is_pinned=False).order_by(Comment.created_at.desc()).all()
+    all_comments = pinned + regular
+
+    for comment in all_comments:
+        comment.replies_list = Comment.query.filter_by(parent_id=comment.id).order_by(Comment.created_at.asc()).all()
+
+    user_votes = {}
+    if current_user.is_authenticated:
+        all_ids = [c.id for c in all_comments] + [r.id for c in all_comments for r in c.replies_list]
+        if all_ids:
+            votes = CommentVote.query.filter(
+                CommentVote.user_id == current_user.id,
+                CommentVote.comment_id.in_(all_ids)
+            ).all()
+            user_votes = {v.comment_id: v.vote_type for v in votes}
+
+    owner = User.query.get(campaign.user_id)
+    campaign_owner = owner.name if owner else "Unknown"
+
+    return render_template(
+        "campaign_details.html",
+        campaign=campaign,
+        updates=updates,
+        media_files=media_files,
+        contributions=contributions,
+        is_wishlisted=is_wishlisted,
+        all_comments=all_comments,
+        user_votes=user_votes,
+        campaign_owner=campaign_owner
+    )
 
 
 if __name__ == "__main__":
