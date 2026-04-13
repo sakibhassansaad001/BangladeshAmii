@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+{% block title %}{{ campaign.title }} · BangladeshAmi{% endblock %}
+{% block content %}
+
+<section class="details-layout">
+    <div class="details-main">
+        <div class="details-hero-card">
+            <div class="details-cover">
+                {% if media_files %}
+                    {% set first_media = media_files[0] %}
+                    {% if first_media.media_type == 'image' %}
+                        <img src="{{ url_for('static', filename='uploads/' + first_media.filename) }}" alt="{{ campaign.title }}">
+                    {% else %}
+                        <video controls>
+                            <source src="{{ url_for('static', filename='uploads/' + first_media.filename) }}">
+                        </video>
+                    {% endif %}
+                {% else %}
+                    <div class="campaign-cover-fallback large">
+                        <span class="material-symbols-outlined">campaign</span>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="details-header">
+                <div class="campaign-badge-row">
+                    <span class="pill pill-soft">{{ campaign.category }}</span>
+                    <span class="pill pill-outline">{{ campaign.crowdfunding_type }}</span>
+                    <span class="status-badge status-{{ campaign.status }}">{{ campaign.status }}</span>
+                </div>
+
+                <h1>{{ campaign.title }}</h1>
+
+                <div class="details-submeta">
+                    <span><span class="material-symbols-outlined">account_circle</span> {{ campaign_owner }}</span>
+                    <span><span class="material-symbols-outlined">calendar_month</span> {{ campaign.duration }} day campaign</span>
+                </div>
+
+                <p class="lead-copy">{{ campaign.description }}</p>
+
+                <div class="fund-row large">
+                    <strong>৳{{ "{:,.0f}".format(campaign.current_amount) }}</strong>
+                    <span>of ৳{{ "{:,.0f}".format(campaign.goal_amount) }} goal</span>
+                </div>
+
+                <div class="progress large">
+                    <div class="progress-bar" style="width: {{ campaign.percent }}%"></div>
+                </div>
+
+                <div class="campaign-footer-meta big-meta">
+                    <span>{{ campaign.percent|round(1) }}% funded</span>
+                    <span>{{ contributions|length }} contribution(s)</span>
+                </div>
+            </div>
+        </div>
+
+        {% if media_files|length > 1 %}
+        <section class="section-card">
+            <div class="section-card-head">
+                <h2>Media Gallery</h2>
+            </div>
+            <div class="media-gallery">
+                {% for media in media_files %}
+                    {% if media.media_type == 'image' %}
+                    <img src="{{ url_for('static', filename='uploads/' + media.filename) }}" class="gallery-img" alt="Campaign media" onclick="openModal(this.src)">
+                    {% else %}
+                    <video controls class="gallery-video">
+                        <source src="{{ url_for('static', filename='uploads/' + media.filename) }}">
+                    </video>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <div id="img-modal" class="img-modal" onclick="closeModal()">
+            <img id="modal-img" src="" alt="Full size">
+        </div>
+
+        <section class="section-card">
+            <div class="section-card-head">
+                <h2>Campaign Updates</h2>
+            </div>
+
+            {% if current_user.is_authenticated and campaign.user_id == current_user.id %}
+            <form action="{{ url_for('add_update', id=campaign.id) }}" method="POST" class="update-form">
+                <textarea name="content" placeholder="Share progress, budget notes or recent achievements..." required></textarea>
+                <button type="submit" class="btn btn-primary">Post Update</button>
+            </form>
+            {% endif %}
+
+            {% if updates %}
+                <div class="update-list">
+                    {% for update in updates %}
+                    <div class="update-card">
+                        <p>{{ update.content }}</p>
+                        <small>{{ update.created_at.strftime('%d %b %Y, %H:%M') }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-inline">No updates yet.</div>
+            {% endif %}
+        </section>
+
+        <section class="section-card">
+            <div class="section-card-head">
+                <h2>Discussion</h2>
+            </div>
+
+            {% if current_user.is_authenticated %}
+            <form action="{{ url_for('comments.add_comment', id=campaign.id) }}" method="POST" class="comment-form">
+                <textarea name="content" placeholder="Write a comment..." required></textarea>
+                <button type="submit" class="btn btn-primary">Post Comment</button>
+            </form>
+            {% else %}
+            <div class="empty-inline">
+                <a href="{{ url_for('signin') }}">Sign in</a> to join the discussion.
+            </div>
+            {% endif %}
+
+            {% for comment in all_comments %}
+            <div class="comment-card {% if comment.is_pinned %}pinned-comment{% endif %}">
+                {% if comment.is_pinned %}
+                    <span class="pin-badge">📌 Pinned</span>
+                {% endif %}
+
+                <div class="comment-head">
+                    <div>
+                        <strong>{{ comment.author.name }}</strong>
+                        <small>{{ comment.created_at.strftime('%d %b %Y, %H:%M') }}</small>
+                    </div>
+                    {% if comment.is_edited %}
+                        <span class="edited-badge">edited</span>
+                    {% endif %}
+                </div>
+
+                <p class="comment-content mention-parse">{{ comment.content }}</p>
+
+                <div class="comment-actions">
+                    {% if current_user.is_authenticated %}
+                    <form method="POST" action="{{ url_for('comments.vote_comment', comment_id=comment.id) }}">
+                        <input type="hidden" name="vote_type" value="up">
+                        <button type="submit" class="vote-btn {% if user_votes.get(comment.id) == 'up' %}voted-up{% endif %}">👍 {{ comment.upvotes }}</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('comments.vote_comment', comment_id=comment.id) }}">
+                        <input type="hidden" name="vote_type" value="down">
+                        <button type="submit" class="vote-btn {% if user_votes.get(comment.id) == 'down' %}voted-down{% endif %}">👎 {{ comment.downvotes }}</button>
+                    </form>
+                    <button class="action-link" type="button" onclick="toggleReply('reply-{{ comment.id }}')">Reply</button>
+                    {% else %}
+                    <span class="vote-count">👍 {{ comment.upvotes }}</span>
+                    <span class="vote-count">👎 {{ comment.downvotes }}</span>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated and (campaign.user_id == current_user.id or current_user.role == 'admin') %}
+                    <form method="POST" action="{{ url_for('comments.pin_comment', comment_id=comment.id) }}">
+                        <button type="submit" class="action-link">{% if comment.is_pinned %}Unpin{% else %}Pin{% endif %}</button>
+                    </form>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated and comment.user_id == current_user.id %}
+                    <button class="action-link" type="button" onclick="toggleEdit('edit-{{ comment.id }}')">Edit</button>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated and (comment.user_id == current_user.id or current_user.role == 'admin') %}
+                    <form method="POST" action="{{ url_for('comments.delete_comment', comment_id=comment.id) }}" onsubmit="return confirm('Delete this comment?')">
+                        <button type="submit" class="action-link danger">Delete</button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                {% if current_user.is_authenticated and comment.user_id == current_user.id %}
+                <div id="edit-{{ comment.id }}" class="edit-form" style="display:none">
+                    <form method="POST" action="{{ url_for('comments.edit_comment', comment_id=comment.id) }}">
+                        <textarea name="content">{{ comment.content }}</textarea>
+                        <div class="inline-actions">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-light" onclick="toggleEdit('edit-{{ comment.id }}')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if current_user.is_authenticated %}
+                <div id="reply-{{ comment.id }}" class="reply-form" style="display:none">
+                    <form method="POST" action="{{ url_for('comments.reply_comment', comment_id=comment.id) }}">
+                        <input type="text" name="content" placeholder="@{{ comment.author.name }}" required>
+                        <div class="inline-actions">
+                            <button type="submit" class="btn btn-primary">Reply</button>
+                            <button type="button" class="btn btn-light" onclick="toggleReply('reply-{{ comment.id }}')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% if comment.replies_list %}
+                <div class="replies-section">
+                    {% for reply in comment.replies_list %}
+                    <div class="reply-card">
+                        <div class="comment-head">
+                            <div>
+                                <strong>{{ reply.author.name }}</strong>
+                                <small>{{ reply.created_at.strftime('%d %b %Y, %H:%M') }}</small>
+                            </div>
+                            {% if reply.is_edited %}
+                                <span class="edited-badge">edited</span>
+                            {% endif %}
+                        </div>
+
+                        <p class="comment-content mention-parse">{{ reply.content }}</p>
+
+                        <div class="comment-actions">
+                            {% if current_user.is_authenticated %}
+                            <form method="POST" action="{{ url_for('comments.vote_comment', comment_id=reply.id) }}">
+                                <input type="hidden" name="vote_type" value="up">
+                                <button type="submit" class="vote-btn {% if user_votes.get(reply.id) == 'up' %}voted-up{% endif %}">👍 {{ reply.upvotes }}</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('comments.vote_comment', comment_id=reply.id) }}">
+                                <input type="hidden" name="vote_type" value="down">
+                                <button type="submit" class="vote-btn {% if user_votes.get(reply.id) == 'down' %}voted-down{% endif %}">👎 {{ reply.downvotes }}</button>
+                            </form>
+                            {% endif %}
+
+                            {% if current_user.is_authenticated and reply.user_id == current_user.id %}
+                            <button class="action-link" type="button" onclick="toggleEdit('edit-r-{{ reply.id }}')">Edit</button>
+                            {% endif %}
+
+                            {% if current_user.is_authenticated and (reply.user_id == current_user.id or current_user.role == 'admin') %}
+                            <form method="POST" action="{{ url_for('comments.delete_comment', comment_id=reply.id) }}" onsubmit="return confirm('Delete this reply?')">
+                                <button type="submit" class="action-link danger">Delete</button>
+                            </form>
+                            {% endif %}
+                        </div>
+
+                        {% if current_user.is_authenticated and reply.user_id == current_user.id %}
+                        <div id="edit-r-{{ reply.id }}" class="edit-form" style="display:none">
+                            <form method="POST" action="{{ url_for('comments.edit_comment', comment_id=reply.id) }}">
+                                <textarea name="content">{{ reply.content }}</textarea>
+                                <div class="inline-actions">
+                                    <button type="submit" class="btn btn-primary">Save</button>
+                                    <button type="button" class="btn btn-light" onclick="toggleEdit('edit-r-{{ reply.id }}')">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+                <div class="empty-inline">No comments yet.</div>
+            {% endfor %}
+        </section>
+    </div>
+
+    <aside class="details-sidebar">
+        {% if current_user.is_authenticated and campaign.user_id != current_user.id and campaign.status == 'approved' %}
+        <div class="sidebar-card sticky-card">
+            <h3>Support This Campaign</h3>
+
+            <form action="{{ url_for('contribute', id=campaign.id) }}" method="POST" class="donate-form">
+                <div class="quick-amounts">
+                    <button type="button" class="chip" onclick="setAmount(50)">৳50</button>
+                    <button type="button" class="chip" onclick="setAmount(100)">৳100</button>
+                    <button type="button" class="chip" onclick="setAmount(500)">৳500</button>
+                    <button type="button" class="chip" onclick="setAmount(1000)">৳1000</button>
+                </div>
+
+                <input type="number" name="amount" id="amount-input" placeholder="Enter amount (৳)" min="1" required>
+
+                <label class="anonymous-toggle">
+                    <input type="checkbox" name="anonymous">
+                    <span>Donate anonymously</span>
+                </label>
+
+                <button type="submit" class="btn btn-primary btn-block">Donate Now</button>
+            </form>
+        </div>
+        {% endif %}
+
+        {% if current_user.is_authenticated and campaign.user_id == current_user.id %}
+        <div class="sidebar-card">
+            <h3>You own this campaign</h3>
+            <p class="muted-copy">Use updates to keep supporters informed.</p>
+            <form action="{{ url_for('add_update', id=campaign.id) }}" method="POST" class="update-form compact">
+                <textarea name="content" placeholder="Post an update..." required></textarea>
+                <button type="submit" class="btn btn-primary btn-block">Post Update</button>
+            </form>
+        </div>
+        {% endif %}
+
+         {% if current_user.is_authenticated %}
+        <div class="sidebar-card">
+            <form action="{{ url_for('campaign.toggle_wishlist', id=campaign.id) }}" method="POST">
+                <button type="submit" class="wishlist-toggle-btn {% if is_wishlisted %}active{% endif %}">
+                    <span class="material-symbols-outlined">
+                        {% if is_wishlisted %}favorite{% else %}favorite_border{% endif %}
+                    </span>
+                    <span>
+                        {% if is_wishlisted %}Remove from Wishlist{% else %}Add to Wishlist{% endif %}
+                    </span>
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="sidebar-card">
+            <h3>Contributors ({{ contributions|length }})</h3>
+
+            {% if contributions %}
+                <div class="contributors-list">
+                    {% for contrib in contributions %}
+                    <div class="contributor-item">
+                        <div>
+                            <strong>
+                                {% if contrib.user_info %}
+                                    {{ contrib.user_info.name }}
+                                {% else %}
+                                    Anonymous
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <span>৳{{ "{:,.0f}".format(contrib.amount) }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-inline">No contributions yet.</div>
+            {% endif %}
+        </div>
+    </aside>
+</section>
+
+<script>
+function setAmount(val) {
+    document.getElementById('amount-input').value = val;
+}
+
+function toggleReply(id) {
+    const el = document.getElementById(id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function toggleEdit(editId) {
+    const el = document.getElementById(editId);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+document.querySelectorAll('.mention-parse').forEach(el => {
+    el.innerHTML = el.textContent.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+});
+
+function openModal(src) {
+    document.getElementById('modal-img').src = src;
+    document.getElementById('img-modal').style.display = 'flex';
+}
+
+function closeModal() {
+    document.getElementById('img-modal').style.display = 'none';
+}
+</script>
+
+{% endblock %}

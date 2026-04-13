@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Edit Campaign · BangladeshAmi{% endblock %}
+{% block content %}
+
+<section class="form-page-shell single-form">
+    <section class="form-main full-width">
+        <div class="section-heading">
+            <h1>Edit Campaign</h1>
+            <p>Update your campaign before approval.</p>
+        </div>
+
+        <form method="POST" class="stack-form">
+            <div class="form-panel">
+                <h3><span class="material-symbols-outlined">edit</span> Campaign Information</h3>
+
+                <div class="form-group">
+                    <label>Campaign Title</label>
+                    <input type="text" name="title" value="{{ campaign.title }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="5" required>{{ campaign.description }}</textarea>
+                </div>
+
+                <div class="two-col">
+                    <div class="form-group">
+                        <label>Goal Amount (৳)</label>
+                        <input type="number" name="goal" value="{{ campaign.goal_amount }}" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Duration (days)</label>
+                        <input type="number" name="duration" value="{{ campaign.duration }}" required>
+                    </div>
+                </div>
+
+                <div class="two-col">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select name="category" required>
+                            {% for cat in categories %}
+                            <option value="{{ cat }}" {% if campaign.category == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Crowdfunding Type</label>
+                        <select name="crowdfunding_type" required>
+                            {% for t in crowdfunding_types %}
+                            <option value="{{ t }}" {% if campaign.crowdfunding_type == t %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Update Campaign</button>
+                </div>
+            </div>
+        </form>
+    </section>
+</section>
+
+{% endblock %}
