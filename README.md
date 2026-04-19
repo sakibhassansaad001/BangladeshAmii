@@ -78,9 +78,9 @@ project/
 
 | Name | Role |
 |------|------|
-| Md. Asakib Hasan Saad | Backend Developer |
-| Hridoy | Frontend Developer |
-| Siam | System Logic & Admin Features |
+| Md. Sakib Hassan Saad | Backend Developer |
+| Mehedi Hasan | Frontend Developer |
+| Mostakim Al Billah Siam | System Logic & Admin Features |
 
 ---
 
