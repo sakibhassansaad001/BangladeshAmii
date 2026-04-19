@@ -137,19 +137,20 @@ python
 
 Then execute:
 
-from app import db
-from models import User
-from werkzeug.security import generate_password_hash
-admin = User(
-name="Admin",
-email="admin@gmail.com",
-password=generate_password_hash("admin123"),
-role="admin"
-)
-db.session.add(admin)
-db.session.commit()
-print("Admin user created successfully!")
-exit()
+>>> from app import db
+>>> from models import User
+>>> from werkzeug.security import generate_password_hash
+
+>>> admin = User(
+>>> name="Admin",
+>>> email="admin@gmail.com",
+>>> password=generate_password_hash("admin123"),
+>>> role="admin")
+>>> 
+>>> db.session.add(admin)
+>>> db.session.commit()
+>>> print("Admin user created successfully!")
+>>> exit()
 
 Step 6: Run the Application
 python app.py
