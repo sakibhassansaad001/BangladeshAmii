@@ -102,3 +102,59 @@ This project is for academic purposes.
 ## ⭐ Acknowledgement
 
 Developed as part of a Software Engineering / Academic Project.
+
+---
+
+Installation & Setup Guide
+
+
+Step 1: Clone the Repository
+git clone https://github.com/your-username/crowdfunding-platform.git
+cd crowdfunding-platform
+
+Step 2: Create Virtual Environment
+python -m venv venv
+Activate:
+Windows
+venv\Scripts\activate
+
+Mac/Linux
+source venv/bin/activate
+
+Step 3: Install Dependencies
+pip install -r requirements.txt
+
+Step 4: Setup Database
+python
+>>> from app import db
+>>> db.create_all()
+>>> exit()
+
+Step 5: Create Admin User
+Run Python shell:
+python
+Then execute:
+from app import db
+from models import User
+from werkzeug.security import generate_password_hash
+admin = User(
+name="Admin",
+email="admin@gmail.com",
+password=generate_password_hash("admin123"),
+role="admin"
+)
+db.session.add(admin)
+db.session.commit()
+print("Admin user created successfully!")
+exit()
+
+Step 6: Run the Application
+python app.py
+
+Step 7: Access the System
+Open browser:
+http://127.0.0.1:5000/
+
+Admin Login Credentials
+• Email: admin@gmail.com
+• Password: admin1
