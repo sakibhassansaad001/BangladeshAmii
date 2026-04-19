@@ -132,8 +132,11 @@ python
 
 Step 5: Create Admin User
 Run Python shell:
+
 python
+
 Then execute:
+
 from app import db
 from models import User
 from werkzeug.security import generate_password_hash
